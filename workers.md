@@ -126,11 +126,10 @@ Probalo abriendo `https://bancos.tu-usuario.workers.dev/reba` y `/bna` en el nav
 Escribí este código a partir de cómo se ve el texto de cada página, sin poder bajar su HTML real, así que puede necesitar un ajuste.
 Si alguna ruta devuelve un error, pegame el mensaje.
 
-### ICBC y Brubank
+### ICBC y Brubank (pendientes)
 
-Sus páginas cargan la cotización con JavaScript (ICBC muestra "No disponible" en el HTML; Brubank muestra un solo valor sin distinguir
-compra y venta), así que un Worker simple no las puede leer. Hace falta ubicar la llamada de red que usa cada página
-(pestaña Network de las herramientas de desarrollo del navegador) y leer esa.
+Se sacaron del tablero por ahora. Sus páginas cargan la cotización con JavaScript, así que un Worker simple no las puede leer:
+hace falta ubicar la llamada de red que usa cada una (pestaña Network de las herramientas de desarrollo del navegador).
 
 ## Banco resaltado
 

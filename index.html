@@ -347,8 +347,7 @@ var VER='2026-10-19.1';
 var CFG={
   MAE_WORKER:'https://mae.dradrizzani.workers.dev/',      /* proxy CORS del MAE: responde /FOR, /CAU, /GRAFICO, /LICIT, /HISTFOR, /HISTCAU */
   PF_WORKER:'',       /* plazo fijo online sin relación (BCRA) */
-  ICBC_WORKER:'', BNA_WORKER:'', REBA_WORKER:'',
-  BRUBANK_URL:'',     /* opcional: planilla de Google (A1 compra, B1 venta) con TU clave */
+  BNA_WORKER:'', REBA_WORKER:'',   /* mismo Worker, rutas /bna y /reba (ver workers.md) */
   MY_BANK:/cr[eé]dito regional/i /* entidad que se resalta como "tuya" */
 };
 
@@ -736,8 +735,7 @@ function loadFCI(){
 /* ---------- dólar por entidad ---------- */
 /* Compra: lo que paga la entidad cuando le vendés dólares. Venta: lo que cobra cuando se los comprás. */
 var BBVA_URL='https://servicios.bbva.com.ar/openmarket/servicios/cotizaciones/monedaExtranjera';
-var ICBC_URL=CFG.ICBC_WORKER;   /* Worker: {valorCompra,valorVenta,fecha,hora} */
-var BNA_URL=CFG.BNA_WORKER;     /* Worker: mismo formato que ICBC */
+var BNA_URL=CFG.BNA_WORKER;     /* Worker: {valorCompra,valorVenta,fecha} */
 function num(x){
   if(typeof x==='number')return x;
   if(typeof x!=='string')return NaN;
@@ -766,14 +764,8 @@ function parseBBVA(j){
   if(!row)throw new Error('formato');
   return quote(num(row.precioCompra),num(row.precioVenta));
 }
-var BRU_URL=CFG.BRUBANK_URL; /* Brubank: planilla de Google, A1 y B1 */
 var COCOS_URL='https://rendimientos.co/api/dolar';   /* Cocos Bank: exchanges.usd[id=cocos-bank], bid y ask */
 var REBA_URL=CFG.REBA_WORKER;   /* Reba: Worker propio sobre reba.com.ar/dolar-oficial, devuelve {valorCompra,valorVenta} */
-function parseBrubank(j){
-  var r=j&&j.values&&j.values[0];
-  if(!r||r.length<2)throw new Error('formato');
-  return quote(num(r[0]),num(r[1]));
-}
 function parseCocos(j){
   var a=j&&j.exchanges&&j.exchanges.usd,row=Array.isArray(a)&&a.filter(function(x){return x&&x.id==='cocos-bank';})[0];
   if(!row)throw new Error('formato');
@@ -781,10 +773,8 @@ function parseCocos(j){
 }
 var BANK_DEFS=[
   {key:'byte',name:'Byte',url:'https://api.manteca.dev/cambio/v3/public/price/direct/USD',parse:parseByte},
-  {key:'icbc',name:'ICBC',url:ICBC_URL,parse:parseICBC},
   {key:'bna',name:'Banco Nación',url:BNA_URL,parse:parseICBC},
   {key:'bbva',name:'BBVA',url:BBVA_URL,parse:parseBBVA},
-  {key:'brubank',name:'Brubank',url:BRU_URL,parse:parseBrubank},
   {key:'cocos',name:'Cocos Bank',url:COCOS_URL,parse:parseCocos},
   {key:'reba',name:'Reba',url:REBA_URL,parse:parseICBC}
 ];
