@@ -147,9 +147,11 @@ Probalo abriendo `https://bancos.tu-usuario.workers.dev/reba` y `/bna` en el nav
 Escribí este código a partir de cómo se ve el texto de cada página, sin poder bajar su HTML real, así que puede necesitar un ajuste.
 Si alguna ruta devuelve un error, pegame el mensaje.
 
-### Brubank (pendiente)
+### Brubank
 
-Se sacó del tablero por ahora: su cotización se carga con JavaScript y falta ubicar la llamada de red (pestaña Network del navegador).
+No usa Worker: el tablero consulta directo la planilla de Google que usa la propia web de Brubank (celdas A1 y B1), con la clave pública
+que esa web tiene incrustada (`CFG.BRUBANK_URL`). Es una planilla y una clave de Brubank, no tuyas: si ellos las cambian o las restringen,
+la fila de Brubank se queda sin datos.
 
 ## Banco resaltado
 

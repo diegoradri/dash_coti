@@ -347,7 +347,8 @@ var VER='2026-10-19.1';
 var CFG={
   MAE_WORKER:'https://mae.dradrizzani.workers.dev/',      /* proxy CORS del MAE: responde /FOR, /CAU, /GRAFICO, /LICIT, /HISTFOR, /HISTCAU */
   PF_WORKER:'https://bancos.dradrizzani.workers.dev/pf',       /* plazo fijo online sin relación (BCRA) */
-  ICBC_WORKER:'https://bancos.dradrizzani.workers.dev/icbc', BNA_WORKER:'https://bancos.dradrizzani.workers.dev/bna', REBA_WORKER:'https://bancos.dradrizzani.workers.dev/reba',   /* mismo Worker, rutas /bna y /reba (ver workers.md) */
+  ICBC_WORKER:'https://bancos.dradrizzani.workers.dev/icbc', BNA_WORKER:'https://bancos.dradrizzani.workers.dev/bna', REBA_WORKER:'https://bancos.dradrizzani.workers.dev/reba',   /* mismo Worker, rutas /icbc /bna /reba /pf (ver workers.md) */
+  BRUBANK_URL:'https://sheets.googleapis.com/v4/spreadsheets/1KG0uD9hojsYyRY4BltuNJByUwygHUBuo5dWdm5uIbrw/values/143BBK!A1:B1?key=AIzaSyC8EJidQr3CidEdb-1xfqS2XsHDuJeKWeA',  /* planilla pública que usa la web de Brubank: A1 y B1 */
   MY_BANK:/cr[eé]dito regional/i /* entidad que se resalta como "tuya" */
 };
 
@@ -735,6 +736,12 @@ function loadFCI(){
 /* ---------- dólar por entidad ---------- */
 /* Compra: lo que paga la entidad cuando le vendés dólares. Venta: lo que cobra cuando se los comprás. */
 var BBVA_URL='https://servicios.bbva.com.ar/openmarket/servicios/cotizaciones/monedaExtranjera';
+var BRU_URL=CFG.BRUBANK_URL;
+function parseBrubank(j){
+  var r=j&&j.values&&j.values[0];
+  if(!r||r.length<2)throw new Error('formato');
+  return quote(num(r[0]),num(r[1]));
+}
 var ICBC_URL=CFG.ICBC_WORKER;   /* Worker: {valorCompra,valorVenta,fecha,hora} */
 var BNA_URL=CFG.BNA_WORKER;     /* Worker: {valorCompra,valorVenta,fecha} */
 function num(x){
@@ -775,6 +782,7 @@ function parseCocos(j){
 var BANK_DEFS=[
   {key:'byte',name:'Byte',url:'https://api.manteca.dev/cambio/v3/public/price/direct/USD',parse:parseByte},
   {key:'icbc',name:'ICBC',url:ICBC_URL,parse:parseICBC},
+  {key:'brubank',name:'Brubank',url:BRU_URL,parse:parseBrubank},
   {key:'bna',name:'Banco Nación',url:BNA_URL,parse:parseICBC},
   {key:'bbva',name:'BBVA',url:BBVA_URL,parse:parseBBVA},
   {key:'cocos',name:'Cocos Bank',url:COCOS_URL,parse:parseCocos},
