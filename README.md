@@ -1,2 +1,0 @@
-# dash_coti
-Dashboard
