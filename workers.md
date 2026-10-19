@@ -44,13 +44,16 @@ buscá la llamada que trae `precios` con `time` y `value`, y corregí esa línea
 
 ## 2) Plazo fijo online (`CFG.PF_WORKER`)
 
-El tablero espera `{ top10: [...], otros: [...] }`, con cada entrada `{ entidad, codigo, tasa_sin_relacion }`,
-armado a partir de https://www.bcra.gob.ar/plazos-fijos-online/ . Hay que leer esa página y convertirla a
-ese formato; si querés, pegame el HTML o el JSON de red que usa esa página y te escribo el Worker.
+El BCRA publica los datos en `https://www.bcra.gob.ar/api/endpoints/plazos-fijos.php` con el formato que ya espera el tablero
+(`top10`, `otros`, y en cada entidad `entidad`, `codigo`, `tasa_sin_relacion`). El Worker `bancos` (sección 3) lo reenvía con CORS en la ruta `/pf`:
 
-## 3) Reba y Banco Nación (`CFG.REBA_WORKER`, `CFG.BNA_WORKER`)
+```js
+PF_WORKER:'https://bancos.tu-usuario.workers.dev/pf',
+```
 
-Un solo Worker (por ejemplo `bancos`) con dos rutas, `/reba` y `/bna`. Lee la página pública de cada banco y devuelve
+## 3) Worker `bancos`: Reba, Banco Nación y plazo fijo (`CFG.REBA_WORKER`, `CFG.BNA_WORKER`, `CFG.PF_WORKER`)
+
+Un solo Worker (por ejemplo `bancos`) con tres rutas: `/reba`, `/bna` y `/pf`. Lee la página pública de cada banco y devuelve
 `{ "valorCompra": ..., "valorVenta": ..., "fecha": ... }`. En `index.html` van así (el Worker es el mismo, cambia la ruta final):
 
 ```js
@@ -61,6 +64,7 @@ BNA_WORKER:'https://bancos.tu-usuario.workers.dev/bna',
 ```js
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS' };
 const UA = 'Mozilla/5.0 (compatible; tablero-mercados)';
+const PF_API = 'https://www.bcra.gob.ar/api/endpoints/plazos-fijos.php';
 
 const texto = (html) => html
   .replace(/<script[\s\S]*?<\/script>/gi, ' ')
@@ -103,7 +107,20 @@ const FUENTES = {
 export default {
   async fetch(req) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
-    const fuente = FUENTES[new URL(req.url).pathname.replace(/^\//, '')];
+    const ruta = new URL(req.url).pathname.replace(/^\//, '');
+    if (ruta === 'pf') {
+      // Plazo fijo online del BCRA: ya viene como { top10: [...], otros: [...] }; solo se reenvía con CORS
+      try {
+        const r = await fetch(PF_API, { headers: { 'User-Agent': UA, Accept: 'application/json' }, cf: { cacheTtl: 60 } });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return new Response(r.body, { headers: { ...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: String(e.message || e) }), {
+          status: 502, headers: { ...CORS, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+    const fuente = FUENTES[ruta];
     if (!fuente) return new Response('ruta inválida', { status: 404, headers: CORS });
     try {
       const r = await fetch(fuente.url, { headers: { 'User-Agent': UA }, cf: { cacheTtl: 60 } });
