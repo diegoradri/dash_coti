@@ -51,20 +51,25 @@ El BCRA publica los datos en `https://www.bcra.gob.ar/api/endpoints/plazos-fijos
 PF_WORKER:'https://bancos.tu-usuario.workers.dev/pf',
 ```
 
-## 3) Worker `bancos`: Reba, Banco Nación y plazo fijo (`CFG.REBA_WORKER`, `CFG.BNA_WORKER`, `CFG.PF_WORKER`)
+## 3) Worker `bancos`: Reba, Banco Nación, ICBC y plazo fijo (`CFG.REBA_WORKER`, `CFG.BNA_WORKER`, `CFG.ICBC_WORKER`, `CFG.PF_WORKER`)
 
-Un solo Worker (por ejemplo `bancos`) con tres rutas: `/reba`, `/bna` y `/pf`. Lee la página pública de cada banco y devuelve
+Un solo Worker (por ejemplo `bancos`) con cuatro rutas: `/reba`, `/bna`, `/icbc` y `/pf`. Lee la página pública de cada banco y devuelve
 `{ "valorCompra": ..., "valorVenta": ..., "fecha": ... }`. En `index.html` van así (el Worker es el mismo, cambia la ruta final):
 
 ```js
 REBA_WORKER:'https://bancos.tu-usuario.workers.dev/reba',
 BNA_WORKER:'https://bancos.tu-usuario.workers.dev/bna',
+ICBC_WORKER:'https://bancos.tu-usuario.workers.dev/icbc',
 ```
 
 ```js
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS' };
 const UA = 'Mozilla/5.0 (compatible; tablero-mercados)';
-const PF_API = 'https://www.bcra.gob.ar/api/endpoints/plazos-fijos.php';
+// Rutas que ya devuelven JSON: solo se reenvían con CORS
+const JSON_DIRECTO = {
+  pf: 'https://www.bcra.gob.ar/api/endpoints/plazos-fijos.php',
+  icbc: 'https://www.icbc.com.ar/ICBC_CotizacionMonedaWEB/cotizacion/dolar',
+};
 
 const texto = (html) => html
   .replace(/<script[\s\S]*?<\/script>/gi, ' ')
@@ -108,10 +113,9 @@ export default {
   async fetch(req) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
     const ruta = new URL(req.url).pathname.replace(/^\//, '');
-    if (ruta === 'pf') {
-      // Plazo fijo online del BCRA: ya viene como { top10: [...], otros: [...] }; solo se reenvía con CORS
+    if (JSON_DIRECTO[ruta]) {
       try {
-        const r = await fetch(PF_API, { headers: { 'User-Agent': UA, Accept: 'application/json' }, cf: { cacheTtl: 60 } });
+        const r = await fetch(JSON_DIRECTO[ruta], { headers: { 'User-Agent': UA, Accept: 'application/json' }, cf: { cacheTtl: 60 } });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return new Response(r.body, { headers: { ...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
       } catch (e) {
@@ -143,10 +147,9 @@ Probalo abriendo `https://bancos.tu-usuario.workers.dev/reba` y `/bna` en el nav
 Escribí este código a partir de cómo se ve el texto de cada página, sin poder bajar su HTML real, así que puede necesitar un ajuste.
 Si alguna ruta devuelve un error, pegame el mensaje.
 
-### ICBC y Brubank (pendientes)
+### Brubank (pendiente)
 
-Se sacaron del tablero por ahora. Sus páginas cargan la cotización con JavaScript, así que un Worker simple no las puede leer:
-hace falta ubicar la llamada de red que usa cada una (pestaña Network de las herramientas de desarrollo del navegador).
+Se sacó del tablero por ahora: su cotización se carga con JavaScript y falta ubicar la llamada de red (pestaña Network del navegador).
 
 ## Banco resaltado
 

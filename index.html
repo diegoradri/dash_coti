@@ -347,7 +347,7 @@ var VER='2026-10-19.1';
 var CFG={
   MAE_WORKER:'https://mae.dradrizzani.workers.dev/',      /* proxy CORS del MAE: responde /FOR, /CAU, /GRAFICO, /LICIT, /HISTFOR, /HISTCAU */
   PF_WORKER:'https://bancos.dradrizzani.workers.dev/pf',       /* plazo fijo online sin relación (BCRA) */
-  BNA_WORKER:'https://bancos.dradrizzani.workers.dev/bna', REBA_WORKER:'https://bancos.dradrizzani.workers.dev/reba',   /* mismo Worker, rutas /bna y /reba (ver workers.md) */
+  ICBC_WORKER:'https://bancos.dradrizzani.workers.dev/icbc', BNA_WORKER:'https://bancos.dradrizzani.workers.dev/bna', REBA_WORKER:'https://bancos.dradrizzani.workers.dev/reba',   /* mismo Worker, rutas /bna y /reba (ver workers.md) */
   MY_BANK:/cr[eé]dito regional/i /* entidad que se resalta como "tuya" */
 };
 
@@ -735,6 +735,7 @@ function loadFCI(){
 /* ---------- dólar por entidad ---------- */
 /* Compra: lo que paga la entidad cuando le vendés dólares. Venta: lo que cobra cuando se los comprás. */
 var BBVA_URL='https://servicios.bbva.com.ar/openmarket/servicios/cotizaciones/monedaExtranjera';
+var ICBC_URL=CFG.ICBC_WORKER;   /* Worker: {valorCompra,valorVenta,fecha,hora} */
 var BNA_URL=CFG.BNA_WORKER;     /* Worker: {valorCompra,valorVenta,fecha} */
 function num(x){
   if(typeof x==='number')return x;
@@ -773,6 +774,7 @@ function parseCocos(j){
 }
 var BANK_DEFS=[
   {key:'byte',name:'Byte',url:'https://api.manteca.dev/cambio/v3/public/price/direct/USD',parse:parseByte},
+  {key:'icbc',name:'ICBC',url:ICBC_URL,parse:parseICBC},
   {key:'bna',name:'Banco Nación',url:BNA_URL,parse:parseICBC},
   {key:'bbva',name:'BBVA',url:BBVA_URL,parse:parseBBVA},
   {key:'cocos',name:'Cocos Bank',url:COCOS_URL,parse:parseCocos},
