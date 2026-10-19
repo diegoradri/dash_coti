@@ -347,7 +347,7 @@ var VER='2026-10-19.1';
 var CFG={
   MAE_WORKER:'https://mae.dradrizzani.workers.dev/',      /* proxy CORS del MAE: responde /FOR, /CAU, /GRAFICO, /LICIT, /HISTFOR, /HISTCAU */
   PF_WORKER:'',       /* plazo fijo online sin relación (BCRA) */
-  REGIONAL_WORKER:'', ICBC_WORKER:'', BNA_WORKER:'', REBA_WORKER:'',
+  ICBC_WORKER:'', BNA_WORKER:'', REBA_WORKER:'',
   BRUBANK_URL:'',     /* opcional: planilla de Google (A1 compra, B1 venta) con TU clave */
   MY_BANK:/cr[eé]dito regional/i /* entidad que se resalta como "tuya" */
 };
@@ -736,7 +736,6 @@ function loadFCI(){
 /* ---------- dólar por entidad ---------- */
 /* Compra: lo que paga la entidad cuando le vendés dólares. Venta: lo que cobra cuando se los comprás. */
 var BBVA_URL='https://servicios.bbva.com.ar/openmarket/servicios/cotizaciones/monedaExtranjera';
-var REGIONAL_URL=CFG.REGIONAL_WORKER; /* Worker de Crédito Regional: mismo formato que ICBC {valorCompra,valorVenta} */
 var ICBC_URL=CFG.ICBC_WORKER;   /* Worker: {valorCompra,valorVenta,fecha,hora} */
 var BNA_URL=CFG.BNA_WORKER;     /* Worker: mismo formato que ICBC */
 function num(x){
@@ -781,7 +780,6 @@ function parseCocos(j){
   return quote(num(row.bid),num(row.ask)); /* bid: lo que te paga al vender; ask: lo que cobra al comprar */
 }
 var BANK_DEFS=[
-  {key:'regional',name:'Crédito Regional',url:REGIONAL_URL,parse:parseICBC,mine:true},
   {key:'byte',name:'Byte',url:'https://api.manteca.dev/cambio/v3/public/price/direct/USD',parse:parseByte},
   {key:'icbc',name:'ICBC',url:ICBC_URL,parse:parseICBC},
   {key:'bna',name:'Banco Nación',url:BNA_URL,parse:parseICBC},

@@ -48,16 +48,16 @@ El tablero espera `{ top10: [...], otros: [...] }`, con cada entrada `{ entidad,
 armado a partir de https://www.bcra.gob.ar/plazos-fijos-online/ . Hay que leer esa página y convertirla a
 ese formato; si querés, pegame el HTML o el JSON de red que usa esa página y te escribo el Worker.
 
-## 3) Cotizaciones por banco (`CFG.REGIONAL_WORKER`, `ICBC_WORKER`, `BNA_WORKER`, `REBA_WORKER`)
+## 3) Cotizaciones por banco (`CFG.ICBC_WORKER`, `BNA_WORKER`, `REBA_WORKER`)
 
 Cada Worker lee la cotización oficial de su banco y responde:
 
-- Crédito Regional / ICBC / Banco Nación / Reba: `{ "valorCompra": 1234, "valorVenta": 1260 }`
+- ICBC / Banco Nación / Reba: `{ "valorCompra": 1234, "valorVenta": 1260 }`
 
 Los que ya funcionan sin Worker: BBVA, Byte y Cocos. Brubank queda apagado salvo que cargues
 `CFG.BRUBANK_URL` con tu propia planilla de Google y tu propia clave.
 
 ## Banco resaltado
 
-`CFG.MY_BANK` (por defecto `/cr[eé]dito regional/i`) es la entidad que se marca como "tuya" en plazo fijo y en dólar por entidad.
+`CFG.MY_BANK` (por defecto `/cr[eé]dito regional/i`) es la entidad que se marca como "tuya" en el ranking de plazo fijo.
 Cambialo por tu banco, por ejemplo `/galicia/i`.
