@@ -1071,7 +1071,7 @@ function renderBonos(){
   if(!hf||!hh)return;
   if(!B){var m='<div class="empty">'+(S.bondsErr?'Sin respuesta de la fuente de precios':'Cargando…')+'</div>';hf.innerHTML=m;hh.innerHTML=m;return;}
   var s=addBiz(arNow().date,1),chg=function(v){return v==null?'<span class="mut">—</span>':pill(v);};
-  var tf=BONOS_TF.map(function(b){var q=B[b.tk],y=q&&tfYield(b,q.c,s,dayNum);return y?{tk:b.tk,c:q.c,tna:y.tna,days:y.days,chg:q.chg}:null;}).filter(Boolean);
+  var tf=BONOS_TF.map(function(b){var q=B[b.tk],y=q&&tfYield(b,q.c,s,dayNum);return y?{tk:b.tk,c:q.c,tna:y.tna,days:y.days,chg:q.chg}:null;}).filter(Boolean).sort(function(a,b){return a.days-b.days;}).slice(0,5); /* siempre los 5 vigentes de plazo más corto de la lista */
   var hd=BONOS_HD.map(function(t){var q=B[t],y=q&&hdYield(t,q.c,s,dayNum);return y?{tk:t,c:q.c,tir:y.tir,dur:y.dur,chg:q.chg}:null;}).filter(Boolean);
   hf.innerHTML=tf.length?'<table><thead><tr><th>Especie</th><th>Precio</th><th>TNA</th><th>Plazo</th><th>Var.</th></tr></thead><tbody>'+
     tf.map(function(r){return '<tr><td>'+esc(r.tk)+'</td><td>'+nf(2).format(r.c)+'</td><td>'+nf(1).format(r.tna)+' %</td><td>'+plazoTxt(r.days)+'</td><td>'+chg(r.chg)+'</td></tr>';}).join('')+'</tbody></table>':na();
