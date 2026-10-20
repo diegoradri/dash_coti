@@ -617,8 +617,9 @@ function loadCAU(){
 
 /* ---------- acciones (data912) ---------- */
 function isUsdLine(x){return /(\.D|D|C)$/.test(x.symbol)&&x.c<15;}
+var MIN_MONTO=5e6; /* monto operado mínimo en pesos para entrar al ranking: evita papeles casi sin operaciones (precios de centavos que "suben 400 %") */
 function pickStocks(d){
-  var rows=d.filter(function(x){return x&&x.symbol&&isFinite(x.pct_change)&&x.c>0&&x.v>0&&x.q_op>=5&&!isUsdLine(x);}).sort(function(a,b){return b.pct_change-a.pct_change;});
+  var rows=d.filter(function(x){return x&&x.symbol&&isFinite(x.pct_change)&&x.c>0&&x.v>0&&x.q_op>=10&&x.c*x.v>=MIN_MONTO&&!isUsdLine(x);}).sort(function(a,b){return b.pct_change-a.pct_change;});
   return {up:rows.slice(0,5),down:rows.slice(-5).reverse()};
 }
 function loadStocks(){return getJSON(API+'/live/arg_stocks').then(function(d){if(!Array.isArray(d))throw new Error('formato');S.stocks=pickStocks(d);});}
