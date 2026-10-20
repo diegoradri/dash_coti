@@ -465,14 +465,15 @@ function firstJSON(urls,ok){
 function fld(o,name){var k=Object.keys(o).filter(function(x){return x.toLowerCase()===name;})[0];return k==null?undefined:o[k];}
 /* Dólar mayorista: ticker UST$T, segmento mayorista, plazo 000; si no está, USMEP con el mismo segmento y plazo. */
 function pickMAE(rows){
-  var rs=rows.filter(function(o){return o&&/mayorista/i.test(String(fld(o,'segmento')))&&Number(fld(o,'plazo'))===0;});
+  var rs=rows.filter(function(o){return o&&/^(m|mayorista)$/i.test(String(fld(o,'segmento')).trim())&&Number(fld(o,'plazo'))===0;}); /* el MAE informa el segmento como "M" (antes, "Mayorista") */
   var row=null,tk='';
   ['UST$T','USMEP'].some(function(t){row=rs.filter(function(o){return String(fld(o,'ticker')).trim().toUpperCase()===t;})[0];if(row)tk=t;return !!row;});
   if(!row)throw new Error('sin UST$T ni USMEP');
   var last=num(fld(row,'ultimo')),mx=num(fld(row,'maximo')),mn=num(fld(row,'minimo')),prev=num(fld(row,'cierreanterior'));
   if(!(last>0))throw new Error('sin último');
   if(!(mx>0))mx=last;if(!(mn>0))mn=last;
-  return {tk:tk,last:last,max:Math.max(mx,last),min:Math.min(mn,last),prev:prev>0?prev:null};
+  var dg=fld(row,'datosgrafico'); /* la propia fila de FOR trae la serie intradía */
+  return {tk:tk,last:last,max:Math.max(mx,last),min:Math.min(mn,last),prev:prev>0?prev:null,graf:dg&&Array.isArray(dg.precios)?dg.precios:null};
 }
 function anyObj(j){return !!j&&typeof j==='object';}
 function rowsOf(j){if(Array.isArray(j))return j;if(!j)return [];var k=Object.keys(j).filter(function(x){return Array.isArray(j[x]);})[0];return k?j[k]:[];}
@@ -543,6 +544,10 @@ function pickIntra(j){
 function loadIntra(){
   var m=S.mae;if(!m)return Promise.resolve();
   var d0=sessionDate(),now=Date.now(),I=S.intra;
+  if(m.graf&&m.graf.length){ /* serie incluida en FOR: se usa si es de la sesión actual */
+    var gp=pickIntra({precios:m.graf});
+    if(gp.length&&new Date(Number(m.graf[0].time)*1000).toISOString().slice(0,10)===d0){S.intra={tk:m.tk,date:d0,pts:gp};S.intraT=now;return Promise.resolve();}
+  }
   if(I&&I.tk===m.tk){
     var age=now-S.intraT;
     if(I.date===d0&&!isOpen('FOR')&&I.pts.length&&age<300000)return Promise.resolve(); /* mercado cerrado: dato ya completo */
