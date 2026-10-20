@@ -12,28 +12,39 @@ Una URL, varias rutas: `/FOR`, `/CAU`, `/GRAFICO`, `/LICIT`, `/HISTFOR`, `/HISTC
 ```js
 const MAE = 'https://api.marketdata.mae.com.ar/api/mercado/';
 const RUTAS = {
-  FOR: 'datos/FOR',
-  CAU: 'datos/CAU',
-  GRAFICO: 'titulo/graficoforex',            // ver nota
-  LICIT: 'licitacionesporestado/Todos',
-  HISTFOR: 'titulo/historicoforex',
-  HISTCAU: 'titulo/historicocauciones',
+  FOR: ['datos/FOR'],
+  CAU: ['datos/CAU'],
+  // el gráfico intradía: se prueban varias rutas hasta que una devuelva "precios"
+  GRAFICO: ['titulo/graficoforex', 'titulo/grafico', 'titulo/graficotitulo', 'titulo/graficointradia',
+            'titulo/graficointradiario', 'datos/grafico', 'datos/GRAFICO', 'titulo/chart', 'titulo/graficos'],
+  LICIT: ['licitacionesporestado/Todos'],
+  HISTFOR: ['titulo/historicoforex'],
+  HISTCAU: ['titulo/historicocauciones'],
 };
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-};
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS' };
+const H = { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0', Origin: 'https://marketdata.mae.com.ar', Referer: 'https://marketdata.mae.com.ar/' };
+const json = (b, st = 200) => new Response(typeof b === 'string' ? b : JSON.stringify(b),
+  { status: st, headers: { ...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+
 export default {
   async fetch(req) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
-    const url = new URL(req.url);
-    const ruta = RUTAS[url.pathname.replace(/^\//, '')];
-    if (!ruta) return new Response('ruta inválida', { status: 404, headers: CORS });
-    const r = await fetch(MAE + ruta + url.search, { headers: { Accept: 'application/json' } });
-    return new Response(r.body, {
-      status: r.status,
-      headers: { ...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-    });
+    const url = new URL(req.url), nombre = url.pathname.replace(/^\//, '');
+    const rutas = RUTAS[nombre];
+    if (!rutas) return json('ruta inválida', 404);
+    const intentos = [];
+    for (const ruta of rutas) {
+      try {
+        const r = await fetch(MAE + ruta + url.search, { headers: H });
+        const t = await r.text();
+        intentos.push({ ruta, status: r.status, inicio: t.slice(0, 120) });
+        if (!r.ok) continue;
+        if (nombre === 'GRAFICO' && !/"precios"\s*:\s*\[/.test(t)) continue;
+        return json(t);
+      } catch (e) { intentos.push({ ruta, error: String(e) }); }
+    }
+    // si nada funcionó, se devuelve el detalle para poder diagnosticar (abrí esta URL en el navegador)
+    return json({ error: 'sin respuesta útil', intentos }, 502);
   },
 };
 ```
