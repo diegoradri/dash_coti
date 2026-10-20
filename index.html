@@ -347,7 +347,8 @@ var VER='2026-10-19.1';
 var CFG={
   MAE_WORKER:'https://mae.dradrizzani.workers.dev/',      /* proxy CORS del MAE: responde /FOR, /CAU, /GRAFICO, /LICIT, /HISTFOR, /HISTCAU */
   PF_WORKER:'https://bancos.dradrizzani.workers.dev/pf',       /* plazo fijo online sin relación (BCRA) */
-  ICBC_WORKER:'https://bancos.dradrizzani.workers.dev/icbc', BNA_WORKER:'https://bancos.dradrizzani.workers.dev/bna', REBA_WORKER:'https://bancos.dradrizzani.workers.dev/reba', MERIDIAN_WORKER:'https://bancos.dradrizzani.workers.dev/meridian',   /* mismo Worker, rutas /icbc /bna /reba /pf (ver workers.md) */
+  ICBC_WORKER:'https://bancos.dradrizzani.workers.dev/icbc', BNA_WORKER:'https://bancos.dradrizzani.workers.dev/bna', REBA_WORKER:'https://bancos.dradrizzani.workers.dev/reba', MERIDIAN_WORKER:'https://bancos.dradrizzani.workers.dev/meridian',
+  PF_EVENTS_WORKER:'https://bancos.dradrizzani.workers.dev/pfsnap', /* historial del día de plazo fijo (necesita el KV 'PF_KV' en el Worker bancos; sin él se usa el historial local) */   /* mismo Worker, rutas /icbc /bna /reba /pf (ver workers.md) */
   BRUBANK_URL:'https://sheets.googleapis.com/v4/spreadsheets/1KG0uD9hojsYyRY4BltuNJByUwygHUBuo5dWdm5uIbrw/values/143BBK!A1:B1?key=AIzaSyC8EJidQr3CidEdb-1xfqS2XsHDuJeKWeA',  /* planilla pública que usa la web de Brubank: A1 y B1 */
   MY_BANK:/cr[eé]dito regional/i /* entidad que se resalta como "tuya" */
 };
@@ -679,9 +680,18 @@ function pickDense(j,n){
 /* Cinta: compara el ranking actual con el anterior guardado en este navegador. */
 var SNAP_KEY='tablero-pf-snap-v1',EV_KEY='tablero-pf-events-v1',EV_MAX=30,EV_TTL=7*864e5;
 var EV=(recall(EV_KEY)||[]).filter(function(e){return e&&e.t>Date.now()-EV_TTL;});
+/* Historial del día en el servidor (Worker + KV): el ranking se compara contra el último guardado allí, así todos los dispositivos ven lo mismo.
+   Si el Worker no responde o no tiene el KV, se usa la comparación local de este navegador (trackLocal). */
 function trackPF(groups){
   var cur={};
   groups.forEach(function(g){g.banks.forEach(function(b){cur[b.code]={name:b.name,rate:g.rate};});});
+  if(!CFG.PF_EVENTS_WORKER){trackLocal(cur);return;}
+  fetch(CFG.PF_EVENTS_WORKER,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({top:cur})})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(j){if(!j||!Array.isArray(j.events))throw new Error('formato');EV=j.events;if(typeof renderTape==='function')renderTape();})
+    .catch(function(e){console.warn('Historial en servidor:',e.message);trackLocal(cur);if(typeof renderTape==='function')renderTape();});
+}
+function trackLocal(cur){
   var old=recall(SNAP_KEY);
   if(old&&old.top){
     var add=[],t=Date.now(),f=function(r){return nf(2).format(r);};
