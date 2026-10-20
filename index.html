@@ -1029,7 +1029,7 @@ function renderPF(){
   if(!PF.groups){box.innerHTML='<div class="empty">'+(PF.err?'Sin respuesta del servicio de tasas':'Cargando…')+'</div>';renderTape();return;}
   box.innerHTML=PF.groups.map(function(g){
     var mine=g.banks.some(function(b){return b.me;});
-    return '<div class="pf'+(mine?' me':'')+'"><div class="rk">'+g.rank+'</div><div class="r">'+nf(2).format(g.rate)+' %</div><div class="logos">'+g.banks.map(chipHTML).join('')+'</div></div>';
+    return '<div class="pf'+(mine?' me':'')+'"><div class="rk">'+g.rank+'</div><div class="r">'+nf(2).format(g.rate)+' %</div><div class="logos">'+g.banks.slice().sort(function(a,b){return (b.me?1:0)-(a.me?1:0);}).map(chipHTML).join('')+'</div></div>';
   }).join('');
   renderTape();
 }
