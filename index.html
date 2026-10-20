@@ -983,7 +983,7 @@ function renderCau(){
   box.innerHTML='<div class="cau2"><div class="hd"><div class="big">'+nf(2).format(c.rate)+' %</div>'+(c.prev?pillBps(c.rate-c.prev):'')+'</div>'+
     '<div class="sp2">'+chart+'</div>'+
     (mn&&mx?rangeBar(c.rate,mn,mx):'')+
-    '<div class="cap2">'+(c.fecha?'Liquida '+fdate(String(c.fecha).slice(0,10)).slice(0,5):'')+(cap?' · '+cap:'')+'</div></div>';
+    '<div class="cap2">'+(c.fecha?'Liquida '+fdate(String(c.fecha).slice(0,10)).slice(0,5)+' · ':'')+SESS.CAU.txt+(cap?' · '+cap:'')+'</div></div>';
 }
 function renderPFW(){
   var m=PF.me;
