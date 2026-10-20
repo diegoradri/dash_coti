@@ -1002,7 +1002,7 @@ function renderRates(){
   }).join('');
 }
 function chipHTML(b){return '<span class="chip'+(b.me?' me':'')+'">'+esc(b.name)+'</span>';}
-var lastTape='',evT=null,evI=0,EVDW=5000;
+var lastTape=null,evT=null,evI=0,EVDW=5000;
 function evDay(t){var d=new Date(t),n=new Date(),y=new Date(n.getTime()-864e5);
   if(d.toDateString()===n.toDateString())return 'hoy '+hhmm(t);
   if(d.toDateString()===y.toDateString())return 'ayer '+hhmm(t);
@@ -1027,7 +1027,7 @@ function evShow(i,animate){
 function evLoop(){clearTimeout(evT);if(EV.length<2)return;evT=setTimeout(function(){if(!document.hidden)evShow(evI+1,true);evLoop();},EVDW);}
 function renderTape(){
   var el=$('#tape');
-  if(!PF.groups){el.innerHTML='';lastTape='';clearTimeout(evT);return;}
+  if(!PF.groups){el.innerHTML='';lastTape=null;clearTimeout(evT);return;}
   var key=EV.map(function(e){return e.t+e.x;}).join('|');
   if(key===lastTape)return; /* sin novedades: no se reinicia la animación */
   lastTape=key;clearTimeout(evT);evI=0;
