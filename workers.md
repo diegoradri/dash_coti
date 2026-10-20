@@ -15,7 +15,7 @@ const RUTAS = {
   FOR: ['datos/FOR'],
   CAU: ['datos/CAU'],
   // el gráfico intradía: se prueban varias rutas hasta que una devuelva "precios"
-  GRAFICO: ['titulo/graficoforex', 'titulo/grafico', 'titulo/graficotitulo', 'titulo/graficointradia',
+  GRAFICO: ['datosgrafico', 'titulo/graficoforex', 'titulo/grafico', 'titulo/graficotitulo', 'titulo/graficointradia',
             'titulo/graficointradiario', 'datos/grafico', 'datos/GRAFICO', 'titulo/chart', 'titulo/graficos'],
   LICIT: ['licitacionesporestado/Todos'],
   HISTFOR: ['titulo/historicoforex'],

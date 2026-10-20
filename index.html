@@ -514,16 +514,19 @@ function loadMAE(){
 }
 /* Serie intradiaria del mayorista: [{time (hora local escrita como UTC), value}] → un punto por minuto, en minutos desde la medianoche. */
 /* Forma que usa la propia web del MAE: fecha, fechaLiquidacion y fechaHasta con el mismo día (sin hora). La anterior queda de respaldo. */
+function nextBiz(d){d=addDays(d,1);while(!isBiz(d))d=addDays(d,1);return d;}
+/* Forma exacta que usa la web del MAE (endpoint 'datosgrafico'): forex plazo 001 con liquidación el siguiente día hábil; la variante vieja queda de respaldo. */
 function grafURL(base,tk,date,old){
-  var o=old?{plazo:'000',segmento:'M',moneda:'T',tipoFecha:'D',fecha:date+'T00:00:00',fechaHasta:addDays(date,1),codTitulo:tk}
-            :{plazo:'000',moneda:'T',tipoFecha:'D',fecha:date,fechaLiquidacion:date,fechaHasta:date,segmento:'M',codTitulo:tk};
+  var o=old?{plazo:'000',segmento:'M',moneda:'T',tipoFecha:'D',fecha:date,fechaHasta:date,fechaLiquidacion:date+'T00:00:00',codTitulo:tk}
+            :{plazo:'001',segmento:'M',moneda:'T',tipoFecha:'D',fecha:date,fechaHasta:date,fechaLiquidacion:nextBiz(date)+'T00:00:00',codTitulo:tk};
   return base+'?oTitulo='+encodeURIComponent(JSON.stringify(o));
 }
 function grafURLs(fn,a,b,date){var r=[];[false,true].forEach(function(old){MAE_GRAF.forEach(function(base){r.push(fn(base,a,b,date,old));});});return r;}
 function grafURLc(base,c,date,old){
-  var pl=String(Math.max(0,Math.round(c.plazo||1)));while(pl.length<3)pl='0'+pl;
-  var o=old?{plazo:pl,segmento:c.seg||'K',moneda:c.mon||'$',tipoFecha:'D',fecha:date+'T00:00:00',fechaHasta:addDays(date,1),codTitulo:c.tk||'CAARS'}
-            :{plazo:pl,moneda:c.mon||'$',tipoFecha:'D',fecha:date,fechaLiquidacion:date,fechaHasta:date,segmento:c.seg||'K',codTitulo:c.tk||'CAARS'};
+  var n=Math.max(0,Math.round(c.plazo||1)),pl=String(n);while(pl.length<3)pl='0'+pl;
+  var liq=addDays(date,n||1);
+  var o=old?{plazo:pl,segmento:c.seg||'K',moneda:c.mon||'$',tipoFecha:'D',fecha:date,fechaHasta:date,fechaLiquidacion:nextBiz(date)+'T00:00:00',codTitulo:c.tk||'CAARS'}
+            :{plazo:pl,segmento:c.seg||'K',moneda:c.mon||'$',tipoFecha:'D',fecha:date,fechaHasta:date,fechaLiquidacion:liq+'T00:00:00',codTitulo:c.tk||'CAARS'};
   return base+'?oTitulo='+encodeURIComponent(JSON.stringify(o));
 }
 function pickIntra(j){
