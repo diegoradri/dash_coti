@@ -347,7 +347,7 @@ var VER='2026-10-19.1';
 var CFG={
   MAE_WORKER:'https://mae.dradrizzani.workers.dev/',      /* proxy CORS del MAE: responde /FOR, /CAU, /GRAFICO, /LICIT, /HISTFOR, /HISTCAU */
   PF_WORKER:'https://bancos.dradrizzani.workers.dev/pf',       /* plazo fijo online sin relación (BCRA) */
-  ICBC_WORKER:'https://bancos.dradrizzani.workers.dev/icbc', BNA_WORKER:'https://bancos.dradrizzani.workers.dev/bna', REBA_WORKER:'https://bancos.dradrizzani.workers.dev/reba',   /* mismo Worker, rutas /icbc /bna /reba /pf (ver workers.md) */
+  ICBC_WORKER:'https://bancos.dradrizzani.workers.dev/icbc', BNA_WORKER:'https://bancos.dradrizzani.workers.dev/bna', REBA_WORKER:'https://bancos.dradrizzani.workers.dev/reba', MERIDIAN_WORKER:'https://bancos.dradrizzani.workers.dev/meridian',   /* mismo Worker, rutas /icbc /bna /reba /pf (ver workers.md) */
   BRUBANK_URL:'https://sheets.googleapis.com/v4/spreadsheets/1KG0uD9hojsYyRY4BltuNJByUwygHUBuo5dWdm5uIbrw/values/143BBK!A1:B1?key=AIzaSyC8EJidQr3CidEdb-1xfqS2XsHDuJeKWeA',  /* planilla pública que usa la web de Brubank: A1 y B1 */
   MY_BANK:/cr[eé]dito regional/i /* entidad que se resalta como "tuya" */
 };
@@ -777,6 +777,7 @@ function parseBBVA(j){
   return quote(num(row.precioCompra),num(row.precioVenta));
 }
 var COCOS_URL='https://rendimientos.co/api/dolar';   /* Cocos Bank: exchanges.usd[id=cocos-bank], bid y ask */
+var MERIDIAN_URL=CFG.MERIDIAN_WORKER; /* Meridian: Worker sobre bancomeridian.com.ar/pizarra, devuelve {valorCompra,valorVenta} */
 var REBA_URL=CFG.REBA_WORKER;   /* Reba: Worker propio sobre reba.com.ar/dolar-oficial, devuelve {valorCompra,valorVenta} */
 function parseCocos(j){
   var a=j&&j.exchanges&&j.exchanges.usd,row=Array.isArray(a)&&a.filter(function(x){return x&&x.id==='cocos-bank';})[0];
@@ -790,7 +791,8 @@ var BANK_DEFS=[
   {key:'bna',name:'Banco Nación',url:BNA_URL,parse:parseICBC},
   {key:'bbva',name:'BBVA',url:BBVA_URL,parse:parseBBVA},
   {key:'cocos',name:'Cocos Bank',url:COCOS_URL,parse:parseCocos},
-  {key:'reba',name:'Reba',url:REBA_URL,parse:parseICBC}
+  {key:'reba',name:'Reba',url:REBA_URL,parse:parseICBC},
+  {key:'meridian',name:'Meridian',url:MERIDIAN_URL,parse:parseICBC}
 ];
 var BANKS={};
 function loadBanks(){

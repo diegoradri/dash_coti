@@ -108,6 +108,16 @@ const FUENTES = {
       return { valorCompra: num(c[1]), valorVenta: num(v[1]) };
     },
   },
+  meridian: {
+    url: 'https://www.bancomeridian.com.ar/pizarra/',
+    parse(t) {
+      // tabla "Tipos de cambio minoristas": fila DÓLAR con compra y venta
+      const i = t.search(/minoristas/i);
+      const m = (i >= 0 ? t.slice(i) : t).match(/D[ÓO]LAR\s+([\d.,]+)\s+([\d.,]+)/i);
+      if (!m) throw new Error('no se encontró la fila del dólar');
+      return { valorCompra: num(m[1]), valorVenta: num(m[2]) };
+    },
+  },
   bna: {
     url: 'https://www.bna.com.ar/Personas',
     parse(t) {
