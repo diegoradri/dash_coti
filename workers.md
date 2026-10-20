@@ -183,8 +183,7 @@ Los que ya funcionan sin Worker: BBVA, Byte y Cocos.
 
 ## Historial del día de plazo fijo (Worker `bancos` + KV)
 
-El Worker `bancos` guarda en un KV (enlazado como `PF_KV`) el último ranking y los cambios del día, más la última novedad
-anterior al día vigente (hora de Buenos Aires). El tablero le manda el ranking a `/pfsnap` y recibe la lista.
+El Worker `bancos` guarda en un KV (enlazado como `PF_KV`) el último ranking y los últimos 7 cambios, sin importar el día. El tablero le manda el ranking a `/pfsnap` y recibe la lista.
 Si el KV no está enlazado o el Worker no responde, el tablero usa el historial local de cada navegador.
 
 Pasos: Workers & Pages → KV → Create (nombre `pf-historial`); Workers & Pages → `bancos` → Settings → Bindings → Add → KV namespace →

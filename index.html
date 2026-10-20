@@ -678,7 +678,7 @@ function pickDense(j,n){
   })};
 }
 /* Cinta: compara el ranking actual con el anterior guardado en este navegador. */
-var SNAP_KEY='tablero-pf-snap-v1',EV_KEY='tablero-pf-events-v1',EV_MAX=30,EV_TTL=7*864e5;
+var SNAP_KEY='tablero-pf-snap-v1',EV_KEY='tablero-pf-events-v1',EV_MAX=7,EV_TTL=30*864e5;
 var EV=(recall(EV_KEY)||[]).filter(function(e){return e&&e.t>Date.now()-EV_TTL;});
 /* Historial del día en el servidor (Worker + KV): el ranking se compara contra el último guardado allí, así todos los dispositivos ven lo mismo.
    Si el Worker no responde o no tiene el KV, se usa la comparación local de este navegador (trackLocal). */
