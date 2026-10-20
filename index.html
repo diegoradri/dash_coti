@@ -458,7 +458,7 @@ function firstJSON(urls,ok){
   var i=0;
   function go(){
     if(i>=urls.length)return Promise.reject(new Error('sin respuesta'));
-    return getJSON(urls[i++]).then(function(j){if(!ok(j))throw new Error('formato');return j;},go);
+    return getJSON(urls[i++]).then(function(j){if(!ok(j))throw new Error('formato');return j;}).catch(go);
   }
   return go();
 }
@@ -558,8 +558,8 @@ function loadIntra(){
   function next(){
     if(k>=cands.length){S.intra={tk:m.tk,date:d0,pts:[]};S.intraT=Date.now();return;}
     var date=cands[k++];
-    return firstJSON(grafURLs(function(b,tk,x,d,old){return grafURL(b,tk,d,old);},m.tk,null,date),function(j){return j&&Array.isArray(j.precios);}).then(function(j){
-      var pts=pickIntra(j);
+    return firstJSON(grafURLs(function(b,tk,x,d,old){return grafURL(b,tk,d,old);},m.tk,null,date),function(j){return j&&Array.isArray(j.precios)&&j.precios.length>0;} /* una respuesta vacía no vale: se prueba la variante siguiente */).catch(function(){return null;}).then(function(j){
+      var pts=j?pickIntra(j):[];
       if(!pts.length)return next();
       S.intra={tk:m.tk,date:date,pts:pts};S.intraT=Date.now();
     });
@@ -581,8 +581,8 @@ function loadIntraCau(){
   function next(){
     if(k>=cands.length){S.intraC={key:key,date:d0,pts:[]};S.intraCT=Date.now();return;}
     var date=cands[k++];
-    return firstJSON(grafURLs(function(b,cc,x,d,old){return grafURLc(b,cc,d,old);},c,null,date),function(j){return j&&Array.isArray(j.precios);}).then(function(j){
-      var pts=pickIntra(j);
+    return firstJSON(grafURLs(function(b,cc,x,d,old){return grafURLc(b,cc,d,old);},c,null,date),function(j){return j&&Array.isArray(j.precios)&&j.precios.length>0;} /* una respuesta vacía no vale: se prueba la variante siguiente */).catch(function(){return null;}).then(function(j){
+      var pts=j?pickIntra(j):[];
       if(!pts.length)return next();
       S.intraC={key:key,date:date,pts:pts};S.intraCT=Date.now();
     });
