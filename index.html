@@ -446,7 +446,12 @@ function isOpen(k){var n=arNow(),s=SESS[k];return n.wd>0&&n.wd<6&&n.min>=s.o&&n.
 /* Fecha de la sesión a consultar: la de hoy recién desde la apertura (10:00); antes de eso y en fin de semana, la última hábil. */
 function sessionDate(){var n=arNow(),d=n.date;if(n.min<SESS.FOR.o)d=addDays(d,-1);while(!isBiz(d))d=addDays(d,-1);return d;}
 /* Feriado probable: el horario indica mercado abierto, pero el MAE no tiene datos de hoy (la última sesión con operaciones es otra). */
-function holidayGuess(){var I=S.intra,n=arNow();return !!(I&&I.pts.length&&I.date!==n.date&&n.min>=SESS.FOR.o+15&&n.wd>0&&n.wd<6);}
+function holidayGuess(){
+  var I=S.intra,n=arNow(),C=S.cau;
+  /* Si la caución trae una liquidación posterior a hoy, el MAE está operando: no es feriado aunque el forex todavía no tenga datos del día. */
+  if(C&&C.fecha&&String(C.fecha).slice(0,10)>n.date)return false;
+  return !!(I&&I.pts.length&&I.date!==n.date&&n.min>=SESS.FOR.o+15&&n.wd>0&&n.wd<6);
+}
 function stateHTML(k,extra){var on=isOpen(k)&&!holidayGuess();return '<span class="st'+(on?' on':'')+'">'+(on?'Abierto':'Cerrado')+'</span><small>'+(extra||SESS[k].txt)+'</small>';}
 function firstJSON(urls,ok){
   ok=ok||Array.isArray;
