@@ -332,8 +332,8 @@ details.lh .lx-ic:first-of-type{border-top:1px solid var(--line)}details.lh{padd
   <div class="r3">
     <section data-src="stocks" class="card" data-tab="acciones"><h2>Acciones <i>ganadores y perdedores</i></h2>
       <div class="two"><div><div class="sub u">▲ Más subieron</div><div id="up"></div></div><div><div class="sub d">▼ Más bajaron</div><div id="down"></div></div></div></section>
-    <section class="card" data-tab="bonos"><h2>Bonos tasa fija <i>ejemplo</i></h2><div id="bf"></div></section>
-    <section class="card" data-tab="bonos"><h2>Bonos hard dólar <i>ejemplo · USD D</i></h2><div id="bh"></div></section>
+    <section data-src="bonos" class="card" data-tab="bonos"><h2>Bonos tasa fija <i>TIR efectiva anual</i></h2><div id="bf"></div></section>
+    <section data-src="bonos" class="card" data-tab="bonos"><h2>Bonos hard dólar <i>USD D · TIR efectiva anual</i></h2><div id="bh"></div></section>
   </div>
 </div>
 <div class="bn" id="bn"></div>
@@ -799,12 +799,91 @@ function loadBanks(){
   });
 }
 
-/* ---------- datos de ejemplo (sin fuente todavía) ---------- */
-var DUMMY={
-  cau:{v:28.40,d:-0.60,max:29.50,min:27.80},
-  bf:[['S29N6','101,85',31.2,'1 mes',0.12],['S15E7','98,40',30.1,'3 meses',0.21],['T30J7','121,30',29.4,'8 meses',-0.08],['TY30P','104,10',28.7,'1,5 años',0.33],['TO28','96,75',27.9,'2 años',-0.15]],
-  bh:[['AL30D','62,40',11.2,0.45],['GD30D','66,10',10.8,0.38],['AL35D','58,25',12.1,-0.22],['GD35D','63,90',11.6,-0.10],['AE38D','70,35',12.4,0.27]]
+/* ---------- bonos: precios en vivo (data912) y TIR calculada en el tablero ---------- */
+/* Fuentes de los flujos:
+   - Hard dólar (AL30/GD30, AL35/GD35, AE38): Decreto 676/2020, Anexo II (condiciones de los Bonos Step Up en dólares). Cupones 30/360, semestrales, 9/1 y 9/7.
+   - Letras y bonos capitalizables en pesos: pago único por cada 100 de valor nominal, según su TEM de emisión (resultados de licitación del Ministerio de Economía).
+   Para sumar un título nuevo basta agregarlo a estas listas. */
+var BONOS_TF=[
+  {tk:'S30O6',venc:'2026-10-30',pf:135.278},
+  {tk:'S30N6',venc:'2026-11-30',pf:129.888},
+  {tk:'T15E7',venc:'2027-01-15',pf:161.104},
+  {tk:'T30A7',venc:'2027-04-30',pf:157.341},
+  {tk:'T30J7',venc:'2027-06-30',pf:156.037}
+];
+function semiDates(from,n){ /* n fechas semestrales (9/1 y 9/7) desde from, inclusive */
+  var y=+from.slice(0,4),m=+from.slice(5,7),r=[];
+  for(var i=0;i<n;i++){r.push(y+'-'+(m<10?'0':'')+m+'-09');m+=6;if(m>12){m-=12;y++;}}
+  return r;
+}
+function mkAmort(first,n,pct,pre){var a=pre?pre.slice():[];semiDates(first,n).forEach(function(d){a.push([d,pct]);});return a;}
+var HD_DEF={
+  AL30:{amort:mkAmort('2025-01-09',12,8,[['2024-07-09',4]]),rates:[['2023-07-09',0.75],['2027-07-09',1.75]]},
+  AL35:{amort:mkAmort('2031-01-09',10,10),rates:[['2023-07-09',3.625],['2024-07-09',4.125],['2027-07-09',4.75],['2028-07-09',5]]},
+  AE38:{amort:mkAmort('2027-07-09',22,100/22),rates:[['2023-07-09',4.25],['2024-07-09',5]]}
 };
+HD_DEF.GD30=HD_DEF.AL30;HD_DEF.GD35=HD_DEF.AL35; /* mismas condiciones de pago, distinta ley */
+var BONOS_HD=['AL30D','GD30D','AL35D','GD35D','AE38D'];
+function days30(a,b){ /* días entre fechas ISO, base 30/360 */
+  var y1=+a.slice(0,4),m1=+a.slice(5,7),d1=Math.min(+a.slice(8,10),30),y2=+b.slice(0,4),m2=+b.slice(5,7),d2=Math.min(+b.slice(8,10),30);
+  return (y2-y1)*360+(m2-m1)*30+(d2-d1);
+}
+function rateAt(def,iso){var r=0;def.rates.forEach(function(x){if(x[0]<=iso)r=x[1];});return r;}
+/* Calendario de pagos: cada fecha trae interés + amortización por cada 100 de valor nominal original. */
+function hdSchedule(def){
+  var A={},last=def.amort[def.amort.length-1][0],dates=semiDates('2024-01-09',40).filter(function(d){return d<=last;}),res=100,out=[];
+  def.amort.forEach(function(a){A[a[0]]=a[1];});
+  dates.forEach(function(p,k){
+    var prev=k?dates[k-1]:'2023-07-09',r=rateAt(def,prev),int=res*r/200,am=A[p]||0;
+    res-=am;out.push({d:p,v:int+am,res:res,r:r});
+  });
+  return out;
+}
+/* TIR efectiva anual por bisección: suma de flujos descontados a (1+y)^(días/365) = precio sucio. */
+function xirr(flows,s,price,dn){
+  var t0=dn(s);
+  function f(y){var t=0;for(var i=0;i<flows.length;i++)t+=flows[i].v/Math.pow(1+y,(dn(flows[i].d)-t0)/365);return t-price;}
+  var lo=-0.95,hi=10;
+  if(!(f(lo)>0&&f(hi)<0))return null;
+  for(var it=0;it<200;it++){var mid=(lo+hi)/2;if(f(mid)>0)lo=mid;else hi=mid;}
+  return (lo+hi)/2;
+}
+/* Bono hard dólar: precio limpio por 100 de VN original + intereses corridos (30/360) = precio sucio; liquidación en s. */
+function hdYield(tk,price,s,dn){
+  var def=HD_DEF[tk.replace(/D$/,'')];if(!def||!(price>0))return null;
+  var sch=hdSchedule(def),fl=sch.filter(function(x){return x.d>s;}),prev=null;
+  sch.forEach(function(x){if(x.d<=s)prev=x;});
+  if(!fl.length)return null;
+  var acc=prev?prev.res*prev.r/200*days30(prev.d,s)/180:0;
+  var y=xirr(fl,s,price+acc,dn);
+  return y==null?null:{tir:y*100,acc:acc,res:prev?prev.res:100};
+}
+/* Letra o bono capitalizable a tasa fija: TIR efectiva anual (TIREA) = (pago final / precio)^(365/días) − 1. */
+function tfYield(b,price,s,dn){
+  var d=dn(b.venc)-dn(s);
+  if(!(d>0)||!(price>0))return null;
+  return {tir:(Math.pow(b.pf/price,365/d)-1)*100,days:d};
+}
+function plazoTxt(d){
+  if(d<45)return d+(d===1?' día':' días');
+  if(d<548){var m=Math.round(d/30.4);return m+(m===1?' mes':' meses');}
+  return (Math.round(d/36.5)/10).toString().replace('.',',')+' años';
+}
+
+function addBiz(d,n){while(n>0){d=addDays(d,1);if(isBiz(d))n--;}return d;}
+/* Precios en vivo: letras y bonos del Tesoro (data912). pct_change es la variación del día. */
+function loadBonds(){
+  return Promise.allSettled([getJSON(API+'/live/arg_notes'),getJSON(API+'/live/arg_bonds')]).then(function(r){
+    var by={},ok=0;
+    r.forEach(function(x){
+      if(x.status!=='fulfilled'||!Array.isArray(x.value))return;
+      ok++;
+      x.value.forEach(function(o){if(o&&o.symbol&&o.c>0)by[o.symbol]={c:+o.c,chg:isFinite(o.pct_change)?+o.pct_change:null};});
+    });
+    if(!ok){S.bondsErr=true;throw new Error('sin respuesta');}
+    S.bondsErr=false;S.bonds={by:by,t:Date.now()};
+  });
+}
 
 /* ---------- render ---------- */
 function statHTML(val,pillHTML,m1,m2,extra){
@@ -978,10 +1057,16 @@ function stockList(el,rows){
   }).join(''):'<div class="empty">Sin datos</div>';
 }
 function renderBonos(){
-  $('#bf').innerHTML='<table><thead><tr><th>Especie</th><th>Precio</th><th>TIR</th><th>Plazo</th><th>Var.</th></tr></thead><tbody>'+
-    DUMMY.bf.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+nf(1).format(r[2])+' %</td><td>'+r[3]+'</td><td>'+pill(r[4])+'</td></tr>';}).join('')+'</tbody></table>';
-  $('#bh').innerHTML='<table><thead><tr><th>Especie</th><th>Precio</th><th>TIR</th><th>Var.</th></tr></thead><tbody>'+
-    DUMMY.bh.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+nf(1).format(r[2])+' %</td><td>'+pill(r[3])+'</td></tr>';}).join('')+'</tbody></table>';
+  var hf=$('#bf'),hh=$('#bh'),B=S.bonds&&S.bonds.by;
+  if(!hf||!hh)return;
+  if(!B){var m='<div class="empty">'+(S.bondsErr?'Sin respuesta de la fuente de precios':'Cargando…')+'</div>';hf.innerHTML=m;hh.innerHTML=m;return;}
+  var s=addBiz(arNow().date,1),chg=function(v){return v==null?'<span class="mut">—</span>':pill(v);};
+  var tf=BONOS_TF.map(function(b){var q=B[b.tk],y=q&&tfYield(b,q.c,s,dayNum);return y?{tk:b.tk,c:q.c,tir:y.tir,days:y.days,chg:q.chg}:null;}).filter(Boolean);
+  var hd=BONOS_HD.map(function(t){var q=B[t],y=q&&hdYield(t,q.c,s,dayNum);return y?{tk:t,c:q.c,tir:y.tir,chg:q.chg}:null;}).filter(Boolean);
+  hf.innerHTML=tf.length?'<table><thead><tr><th>Especie</th><th>Precio</th><th>TIR</th><th>Plazo</th><th>Var.</th></tr></thead><tbody>'+
+    tf.map(function(r){return '<tr><td>'+esc(r.tk)+'</td><td>'+nf(2).format(r.c)+'</td><td>'+nf(1).format(r.tir)+' %</td><td>'+plazoTxt(r.days)+'</td><td>'+chg(r.chg)+'</td></tr>';}).join('')+'</tbody></table>':na();
+  hh.innerHTML=hd.length?'<table><thead><tr><th>Especie</th><th>Precio</th><th>TIR</th><th>Var.</th></tr></thead><tbody>'+
+    hd.map(function(r){return '<tr><td>'+esc(r.tk)+'</td><td>'+nf(2).format(r.c)+'</td><td>'+nf(1).format(r.tir)+' %</td><td>'+chg(r.chg)+'</td></tr>';}).join('')+'</tbody></table>':na();
 }
 function renderHome(){
   if(!$('#hm-may'))return;
@@ -1033,7 +1118,7 @@ function renderHome(){
 }
 function renderAll(){
   renderMay();fxCard('#c-mep',S.fx.mep,'mep');fxCard('#c-ccl',S.fx.ccl,'ccl');renderCau();renderPFW();
-  renderRates();renderPF();renderFCI();renderBanks();renderLic();renderHome();
+  renderRates();renderPF();renderFCI();renderBanks();renderLic();renderHome();renderBonos();
   stockList($('#up'),S.stocks.up);stockList($('#down'),S.stocks.down);
 }
 
@@ -1320,7 +1405,7 @@ var busy=false,hiddenStale=false,next=0;
 function refresh(force){
   if(busy)return;busy=true;$('#rf').classList.add('spin');
   if(force===true){S.t.bcra=0;S.t.pf=0;S.fciT=0;}
-  var now=Date.now(),jobs=[loadMAE().catch(function(){}),loadCAU().catch(function(){}),loadFX().catch(function(){}),loadStocks().catch(function(){}),loadBanks().catch(function(){})];
+  var now=Date.now(),jobs=[loadMAE().catch(function(){}),loadCAU().catch(function(){}),loadFX().catch(function(){}),loadStocks().catch(function(){}),loadBanks().catch(function(){}),loadBonds().catch(function(){})];
   if(!S.t.bcra||now-S.t.bcra>=SLOW)jobs.push(loadBCRA().catch(function(){}));
   if(!S.t.pf||now-S.t.pf>=SLOW)jobs.push(loadPF().catch(function(){}));
   if(!S.fciT||now-S.fciT>=FCI_EVERY)jobs.push(loadFCI().catch(function(){}));
@@ -1403,7 +1488,7 @@ function popHide(){clearTimeout(popT);if(popEl)popEl.classList.remove('on');popI
 })();
 
 /* ---------- cuenta regresiva y actualización por tarjeta ---------- */
-var GROUPS={lic:[loadLIC],may:[loadMAE,loadBCRA],cau:[loadCAU],fx:[loadFX],banks:[loadBanks],stocks:[loadStocks],bcra:[loadBCRA],pf:[loadPF],fci:[loadFCI]};
+var GROUPS={lic:[loadLIC],may:[loadMAE,loadBCRA],cau:[loadCAU],fx:[loadFX],banks:[loadBanks],bonos:[loadBonds],stocks:[loadStocks],bcra:[loadBCRA],pf:[loadPF],fci:[loadFCI]};
 var RUNNING={};
 var MINI='<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 6.1"/><path d="M20 4v7h-7"/></svg>';
 function dueOf(src){ /* instante del próximo refresco automático de cada tarjeta */
@@ -1524,7 +1609,7 @@ if(!isApp&&mq.matches){
     setTimeout(function(){if(!inst)inst=mk('bn-inst','Para instalar: Compartir \u2192 Agregar a inicio<small>Desde Safari</small>',null,null,dismiss);},4000);
   }
 })();
-renderBonos();renderAll();syncMode();
+renderAll();syncMode();
 refresh();
 runGroup('lic');
 })();
