@@ -397,7 +397,7 @@ function loadBCRA(){
       if(r.status!=='fulfilled')return;
       var det=r.value&&r.value.results&&r.value.results[0]&&r.value.results[0].detalle;
       if(!Array.isArray(det)||!det.length)return;
-      var pts=det.map(function(x){return {d:x.fecha,v:Number(x.valor)};}).filter(function(p){return isFinite(p.v);}).sort(function(a,b){return a.d<b.d?-1:1;});
+      var pts=det.map(function(x){return {d:x.fecha,v:Number(x.valor)};}).filter(function(p){return isFinite(p.v)&&p.v>0;}).sort(function(a,b){return a.d<b.d?-1:1;}); /* el BCRA a veces publica un 0 provisorio en el último día: se descarta */
       if(pts.length){S.bcra[ids[i]]=pts;ok++;}
     });
     if(ok)S.t.bcra=Date.now();
