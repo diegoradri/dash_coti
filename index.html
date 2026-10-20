@@ -971,7 +971,7 @@ function fxCard(id,o,key){
 function renderCau(){
   var c=S.cau,box=$('#c-cau'),h=$('#h-cau');
   if(!c){h.textContent='TNA';box.innerHTML=na();return;}
-  h.textContent='Plazo '+c.plazo+(c.plazo===1?' día':' días')+' · TNA'+(c.fecha?' · liq. '+fdate(String(c.fecha).slice(0,10)).slice(0,5):'')+' · '+((isOpen('CAU')&&!holidayGuess())?'Abierto':'Cerrado');
+  h.textContent='Plazo '+c.plazo+(c.plazo===1?' día':' días')+' · TNA'+(c.fecha?' · liq. '+fdate(String(c.fecha).slice(0,10)).slice(0,5):'')+' · '+((isOpen('CAU')&&!holidayGuess())?'Abierto':'Cerrado')+' · '+SESS.CAU.txt;
   if(!c.rate){box.innerHTML='<div class="hd"><div class="mk" style="margin-left:0">'+stateHTML('CAU')+'</div></div><div class="empty">Sin operaciones en el plazo más corto</div>';return;}
   var I=S.intraC&&S.intraC.key===((c.tk||'CAARS')+'|'+c.plazo)?S.intraC:null,pts=I&&I.pts.length>1?I.pts:null,today=arNow().date,mn=c.min,mx=c.max;
   if(pts){var vs=pts.map(function(x){return x.v;});mn=mn||Math.min.apply(null,vs);mx=mx||Math.max.apply(null,vs);}
