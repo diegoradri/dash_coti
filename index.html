@@ -332,8 +332,8 @@ details.lh .lx-ic:first-of-type{border-top:1px solid var(--line)}details.lh{padd
   <div class="r3">
     <section data-src="stocks" class="card" data-tab="acciones"><h2>Acciones <i>ganadores y perdedores</i></h2>
       <div class="two"><div><div class="sub u">▲ Más subieron</div><div id="up"></div></div><div><div class="sub d">▼ Más bajaron</div><div id="down"></div></div></div></section>
-    <section data-src="bonos" class="card" data-tab="bonos"><h2>Bonos tasa fija <i>TNA · al precio de hoy</i></h2><div id="bf"></div></section>
-    <section data-src="bonos" class="card" data-tab="bonos"><h2>Bonos hard dólar <i>USD D · TIR efectiva anual</i></h2><div id="bh"></div></section>
+    <section data-src="bonos" class="card" data-tab="bonos"><h2>Bonos tasa fija <i>TNA · duration (años)</i></h2><div id="bf"></div></section>
+    <section data-src="bonos" class="card" data-tab="bonos"><h2>Bonos hard dólar <i>USD D · TIR · duration (años)</i></h2><div id="bh"></div></section>
   </div>
 </div>
 <div class="bn" id="bn"></div>
@@ -848,6 +848,12 @@ function xirr(flows,s,price,dn){
   for(var it=0;it<200;it++){var mid=(lo+hi)/2;if(f(mid)>0)lo=mid;else hi=mid;}
   return (lo+hi)/2;
 }
+/* Duration de Macaulay en años: promedio de los plazos de cada flujo, ponderado por su valor presente a la TIR. */
+function macDur(flows,s,y,dn){
+  var t0=dn(s),num=0,den=0;
+  flows.forEach(function(f){var t=(dn(f.d)-t0)/365,pv=f.v/Math.pow(1+y,t);num+=t*pv;den+=pv;});
+  return den>0?num/den:null;
+}
 /* Bono hard dólar: precio limpio por 100 de VN original + intereses corridos (30/360) = precio sucio; liquidación en s. */
 function hdYield(tk,price,s,dn){
   var def=HD_DEF[tk.replace(/D$/,'')];if(!def||!(price>0))return null;
@@ -856,18 +862,13 @@ function hdYield(tk,price,s,dn){
   if(!fl.length)return null;
   var acc=prev?prev.res*prev.r/200*days30(prev.d,s)/180:0;
   var y=xirr(fl,s,price+acc,dn);
-  return y==null?null:{tir:y*100,acc:acc,res:prev?prev.res:100};
+  return y==null?null:{tir:y*100,acc:acc,res:prev?prev.res:100,dur:macDur(fl,s,y,dn)};
 }
 /* Letra o bono capitalizable a tasa fija: TNA = (pago final / precio − 1) × 365 / días (convención del mercado); también se calcula la TIR efectiva anual. */
 function tfYield(b,price,s,dn){
   var d=dn(b.venc)-dn(s);
   if(!(d>0)||!(price>0))return null;
-  return {tna:(b.pf/price-1)*365/d*100,tir:(Math.pow(b.pf/price,365/d)-1)*100,days:d};
-}
-function plazoTxt(d){
-  if(d<45)return d+(d===1?' día':' días');
-  if(d<548){var m=Math.round(d/30.4);return m+(m===1?' mes':' meses');}
-  return (Math.round(d/36.5)/10).toString().replace('.',',')+' años';
+  return {tna:(b.pf/price-1)*365/d*100,tir:(Math.pow(b.pf/price,365/d)-1)*100,days:d,dur:d/365}; /* sin cupones, la duration es el plazo */
 }
 
 function addBiz(d,n){while(n>0){d=addDays(d,1);if(isBiz(d))n--;}return d;}
@@ -1061,12 +1062,12 @@ function renderBonos(){
   if(!hf||!hh)return;
   if(!B){var m='<div class="empty">'+(S.bondsErr?'Sin respuesta de la fuente de precios':'Cargando…')+'</div>';hf.innerHTML=m;hh.innerHTML=m;return;}
   var s=addBiz(arNow().date,1),chg=function(v){return v==null?'<span class="mut">—</span>':pill(v);};
-  var tf=BONOS_TF.map(function(b){var q=B[b.tk],y=q&&tfYield(b,q.c,s,dayNum);return y?{tk:b.tk,c:q.c,tna:y.tna,days:y.days,chg:q.chg}:null;}).filter(Boolean);
-  var hd=BONOS_HD.map(function(t){var q=B[t],y=q&&hdYield(t,q.c,s,dayNum);return y?{tk:t,c:q.c,tir:y.tir,chg:q.chg}:null;}).filter(Boolean);
-  hf.innerHTML=tf.length?'<table><thead><tr><th>Especie</th><th>Precio</th><th>TNA</th><th>Plazo</th><th>Var.</th></tr></thead><tbody>'+
-    tf.map(function(r){return '<tr><td>'+esc(r.tk)+'</td><td>'+nf(2).format(r.c)+'</td><td>'+nf(1).format(r.tna)+' %</td><td>'+plazoTxt(r.days)+'</td><td>'+chg(r.chg)+'</td></tr>';}).join('')+'</tbody></table>':na();
-  hh.innerHTML=hd.length?'<table><thead><tr><th>Especie</th><th>Precio</th><th>TIR</th><th>Var.</th></tr></thead><tbody>'+
-    hd.map(function(r){return '<tr><td>'+esc(r.tk)+'</td><td>'+nf(2).format(r.c)+'</td><td>'+nf(1).format(r.tir)+' %</td><td>'+chg(r.chg)+'</td></tr>';}).join('')+'</tbody></table>':na();
+  var tf=BONOS_TF.map(function(b){var q=B[b.tk],y=q&&tfYield(b,q.c,s,dayNum);return y?{tk:b.tk,c:q.c,tna:y.tna,dur:y.dur,chg:q.chg}:null;}).filter(Boolean);
+  var hd=BONOS_HD.map(function(t){var q=B[t],y=q&&hdYield(t,q.c,s,dayNum);return y?{tk:t,c:q.c,tir:y.tir,dur:y.dur,chg:q.chg}:null;}).filter(Boolean);
+  hf.innerHTML=tf.length?'<table><thead><tr><th>Especie</th><th>Precio</th><th>TNA</th><th>Duration</th><th>Var.</th></tr></thead><tbody>'+
+    tf.map(function(r){return '<tr><td>'+esc(r.tk)+'</td><td>'+nf(2).format(r.c)+'</td><td>'+nf(1).format(r.tna)+' %</td><td>'+nf(2).format(r.dur)+'</td><td>'+chg(r.chg)+'</td></tr>';}).join('')+'</tbody></table>':na();
+  hh.innerHTML=hd.length?'<table><thead><tr><th>Especie</th><th>Precio</th><th>TIR</th><th>Duration</th><th>Var.</th></tr></thead><tbody>'+
+    hd.map(function(r){return '<tr><td>'+esc(r.tk)+'</td><td>'+nf(2).format(r.c)+'</td><td>'+nf(1).format(r.tir)+' %</td><td>'+nf(2).format(r.dur)+'</td><td>'+chg(r.chg)+'</td></tr>';}).join('')+'</tbody></table>':na();
 }
 function renderHome(){
   if(!$('#hm-may'))return;
