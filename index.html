@@ -153,9 +153,9 @@ section[data-src=lic] .ctl em{display:none}
 .lic .stat{justify-content:flex-start;gap:0;min-height:0}
 .lic-d{display:flex;flex-direction:column;flex:1;min-height:0}
 .lbd{display:flex;gap:16px;flex:1;min-height:0}
-.lL{flex:none;width:132px;display:flex;flex-direction:column}
+.lL{flex:none;min-width:132px;max-width:48%;display:flex;flex-direction:column} /* ancho según el monto: antes fijo en 132px y la tabla lo tapaba */
 .lL .lk{font-size:11.5px;color:var(--mut)}
-.lL .lbig{font-size:34px;font-weight:700;line-height:1.1;white-space:nowrap}
+.lL .lbig{font-size:clamp(24px,2.1vw,34px);font-weight:700;line-height:1.1;white-space:nowrap}
 .lL .lun{font-size:12px;color:var(--mut);margin-top:-2px}
 .lL .lsec{margin-top:auto;font-weight:700;font-size:15px;white-space:nowrap}
 .lR{flex:1;min-width:0}
