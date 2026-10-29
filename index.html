@@ -342,7 +342,7 @@ details.lh .lx-ic:first-of-type{border-top:1px solid var(--line)}details.lh{padd
 <script>
 (function(){
 'use strict';
-var VER='2026-10-29.1';
+var VER='2026-10-29.2';
 /* ---------- CONFIGURACIÓN: completá con TUS Workers de Cloudflare (ver workers.md). Vacío = esa tarjeta muestra "Falta cargar el Worker". ---------- */
 var CFG={
   MAE_WORKER:'https://mae.dradrizzani.workers.dev/',      /* proxy CORS del MAE: responde /FOR, /CAU, /GRAFICO, /LICIT, /HISTFOR, /HISTCAU */
@@ -1109,6 +1109,11 @@ function renderBonos(){
   var hd=BONOS_HD.map(function(t){var q=B[t],y=q&&hdYield(t,q.c,s,dayNum);return y?{tk:t,c:q.c,tir:y.tir,dur:y.dur,chg:q.chg}:null;}).filter(Boolean);
   hf.innerHTML=tf.length?'<table><thead><tr><th>Especie</th><th>Precio</th><th>TNA</th><th>Plazo</th><th>Var.</th></tr></thead><tbody>'+
     tf.map(function(r){return '<tr><td>'+esc(r.tk)+'</td><td>'+nf(2).format(r.c)+'</td><td>'+nf(1).format(r.tna)+' %</td><td>'+plazoTxt(r.days)+'</td><td>'+chg(r.chg)+'</td></tr>';}).join('')+'</tbody></table>':na();
+  /* aviso para cargar letras nuevas en BONOS_TF: cuando ya hay menos de 5 vigentes, o cuando la próxima vence en 7 días y deja menos de 5 */
+  var vig=BONOS_TF.filter(function(b){return b.venc>s;}).sort(function(a,b){return a.venc<b.venc?-1:1;}),av='';
+  if(vig.length<5)av='Quedan '+vig.length+' letras vigentes: cargá una nueva en BONOS_TF';
+  else if(vig.length===5&&dayNum(vig[0].venc)-dayNum(s)<=7)av='La '+esc(vig[0].tk)+' vence el '+fdate(vig[0].venc).slice(0,5)+': cargá una letra nueva en BONOS_TF';
+  if(av)hf.innerHTML+='<div class="mut" style="font-size:12px;margin-top:6px">⚠ '+av+'</div>';
   hh.innerHTML=hd.length?'<table><thead><tr><th>Especie</th><th>Precio</th><th>TIR</th><th>Duration</th><th>Var.</th></tr></thead><tbody>'+
     hd.map(function(r){return '<tr><td>'+esc(r.tk)+'</td><td>'+nf(2).format(r.c)+'</td><td>'+nf(1).format(r.tir)+' %</td><td>'+nf(2).format(r.dur)+'</td><td>'+chg(r.chg)+'</td></tr>';}).join('')+'</tbody></table>':na();
 }
