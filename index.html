@@ -342,7 +342,7 @@ details.lh .lx-ic:first-of-type{border-top:1px solid var(--line)}details.lh{padd
 <script>
 (function(){
 'use strict';
-var VER='2026-10-19.1';
+var VER='2026-10-29.1';
 /* ---------- CONFIGURACIÓN: completá con TUS Workers de Cloudflare (ver workers.md). Vacío = esa tarjeta muestra "Falta cargar el Worker". ---------- */
 var CFG={
   MAE_WORKER:'https://mae.dradrizzani.workers.dev/',      /* proxy CORS del MAE: responde /FOR, /CAU, /GRAFICO, /LICIT, /HISTFOR, /HISTCAU */
@@ -441,8 +441,24 @@ function arNow(){
   return {date:o.year+'-'+o.month+'-'+o.day,min:(+o.hour)*60+(+o.minute),wd:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(o.weekday)};
 }
 function addDays(d,n){var p=d.split('-'),t=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]+n));return t.toISOString().slice(0,10);}
-function isBiz(d){var w=new Date(d+'T00:00:00Z').getUTCDay();return w>0&&w<6;}
-function isOpen(k){var n=arNow(),s=SESS[k];return n.wd>0&&n.wd<6&&n.min>=s.o&&n.min<s.c;}
+/* Feriados nacionales: sin operaciones ni liquidación. Base: los inamovibles de fecha fija de cada año y los de 2026 ya trasladados;
+   al cargar se completa con la lista oficial de argentinadatos (año actual y siguiente, guardada 7 días en el navegador). */
+var FER_FIJOS={'01-01':1,'03-24':1,'04-02':1,'05-01':1,'05-25':1,'06-20':1,'07-09':1,'11-06':1,'12-08':1,'12-25':1}; /* 11-06: Día del Bancario, el mercado no opera */
+var FER_KEY='tablero-feriados-v1',FER={};
+['2026-02-16','2026-02-17','2026-03-23','2026-04-03','2026-06-15','2026-07-10','2026-08-17','2026-10-12','2026-11-23','2026-12-07'].forEach(function(d){FER[d]=1;});
+(function(){var c=recall(FER_KEY);if(c&&Array.isArray(c.d))c.d.forEach(function(d){FER[d]=1;});})();
+function loadFeriados(){
+  var c=recall(FER_KEY),y=+arNow().date.slice(0,4);
+  if(c&&c.y===y&&Date.now()-c.t<7*864e5)return Promise.resolve(false);
+  return Promise.allSettled([y,y+1].map(function(a){return getJSON('https://api.argentinadatos.com/v1/feriados/'+a);})).then(function(r){
+    var d=[];r.forEach(function(x){if(x.status==='fulfilled'&&Array.isArray(x.value))x.value.forEach(function(f){if(f&&/^\d{4}-\d{2}-\d{2}$/.test(f.fecha))d.push(f.fecha);});});
+    if(!d.length)return false;
+    d.forEach(function(f){FER[f]=1;});store(FER_KEY,{y:y,t:Date.now(),d:d});return true;
+  });
+}
+function isHoliday(d){return !!(FER[d]||FER_FIJOS[d.slice(5)]);}
+function isBiz(d){var w=new Date(d+'T00:00:00Z').getUTCDay();return w>0&&w<6&&!isHoliday(d);}
+function isOpen(k){var n=arNow(),s=SESS[k];return isBiz(n.date)&&n.min>=s.o&&n.min<s.c;}
 /* Fecha de la sesión a consultar: la de hoy recién desde la apertura (10:00); antes de eso y en fin de semana, la última hábil. */
 function sessionDate(){var n=arNow(),d=n.date;if(n.min<SESS.FOR.o)d=addDays(d,-1);while(!isBiz(d))d=addDays(d,-1);return d;}
 /* Feriado probable: el horario indica mercado abierto, pero el MAE no tiene datos de hoy (la última sesión con operaciones es otra). */
@@ -1638,6 +1654,7 @@ if(!isApp&&mq.matches){
   }
 })();
 renderAll();syncMode();
+loadFeriados().then(function(ch){if(ch)try{renderAll();}catch(e){}},function(){});
 refresh();
 runGroup('lic');
 })();
